@@ -5,7 +5,7 @@
  */
 package battlesnake2;
 
-import java.beans.EventHandler;
+
 import javafx.application.Application;
 import javafx.stage.Stage;
 import javafx.scene.Scene;
@@ -14,8 +14,8 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.paint.Color;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.HashMap;
+
 
 
 /**
@@ -30,9 +30,9 @@ public class MainBoard extends Application {
     private static int GRID_SIZE = 3;
     private static int GRIDS_PER_PLAYER_WIDTH = 3;
     private static int PLAYER_START_LENGTH = 27; 
-    private static int JUMPS_PER_HORIZONTAL_MOVE = 300;
+    private static int JUMPS_PER_HORIZONTAL_MOVE = 1000;
     private static long GAME_SPEED = 7;
-    private ArrayList<Rectangle> gridList = new ArrayList<>();
+    private HashMap<Integer, Rectangle> gridList = new HashMap<>();
     private ArrayList<Rectangle> playerOne = new ArrayList<>();
     private boolean isAlive = true;
     private boolean isRunning = false;
@@ -95,12 +95,13 @@ public class MainBoard extends Application {
      */
     public void makeGrid() {
         for(int i = 0; i < GRID_WIDTH; i += GRID_SIZE) {
-            for( int j = 0; j < GRID_HEIGTH; j += GRID_SIZE) {
+            for(int j = 0; j < GRID_HEIGTH; j += GRID_SIZE) {
                 Rectangle rectangle = new Rectangle(GRID_SIZE, GRID_SIZE, Color.RED);
                 rectangle.setX(i);
                 rectangle.setY(j);
                 pane.getChildren().add(rectangle);
-                gridList.add(rectangle);
+                Integer a = (j + i * JUMPS_PER_HORIZONTAL_MOVE)/3;
+                gridList.put(a, rectangle);
             }
         }
     }
@@ -108,20 +109,21 @@ public class MainBoard extends Application {
      * Creates the player, or players if that feature is introduced. 
      */
     public void makePlayer() {
-        int startPoint = 600 * 7 + 3 * 10;
+        int startPoint = 0;
         for(int j = startPoint; j < startPoint + JUMPS_PER_HORIZONTAL_MOVE*PLAYER_START_LENGTH; j += JUMPS_PER_HORIZONTAL_MOVE) {
             for(int i = 0; i < GRIDS_PER_PLAYER_WIDTH ; i++) {
-                Rectangle startSnake = gridList.get(i+j);
+                Rectangle startSnake = gridList.get(i + j);
                 startSnake.setFill(Color.BLUE);
                 playerOne.add(startSnake);
                 playerLength = PLAYER_START_LENGTH;
                 currentLocation = j;
+                System.out.println(j);
             }
         }
     }
     
     public void movePlayer() {
-        if ((currentDirection != turnDirection) && ((currentLocation+ 300) % 900 < 300) && (currentLocation % 3 ==0)) {
+        if ((currentDirection != turnDirection) && ((currentLocation + JUMPS_PER_HORIZONTAL_MOVE) % (GRIDS_PER_PLAYER_WIDTH*JUMPS_PER_HORIZONTAL_MOVE) < JUMPS_PER_HORIZONTAL_MOVE) && ((currentLocation + JUMPS_PER_HORIZONTAL_MOVE) % GRIDS_PER_PLAYER_WIDTH ==0)) {
             currentDirection = turnDirection;
         }
         if (currentDirection.equals("Right") || currentDirection.equals("Left")) {
@@ -140,16 +142,11 @@ public class MainBoard extends Application {
     // Set the controlls for the player
     
     public void moveRight() {
-        if( currentLocation + JUMPS_PER_HORIZONTAL_MOVE > 90000) {
-            isAlive = false;
-            System.out.println("DEAD");
-            return;
-        }
         for(int i = 0 ; i < GRIDS_PER_PLAYER_WIDTH; i++) {
             Rectangle toMove = gridList.get(currentLocation + JUMPS_PER_HORIZONTAL_MOVE + i);
-            toMove.setFill(Color.BLUE);
-            Rectangle toRemove = playerOne.get(i);
-            toRemove.setFill(Color.RED);
+              toMove.setFill(Color.BLUE);
+              Rectangle toRemove = playerOne.get(i);
+              toRemove.setFill(Color.RED);
         }
         for(int i = 0 ; i < GRIDS_PER_PLAYER_WIDTH; i++) {
             Rectangle toMove = gridList.get(currentLocation + JUMPS_PER_HORIZONTAL_MOVE + i);        
