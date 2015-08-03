@@ -25,11 +25,11 @@ import java.util.HashMap;
 public class MainBoard extends Application {
     
     private Pane pane = new Pane();
-    private static double GRID_WIDTH = 900;
-    private static double GRID_HEIGTH = 900;
-    private static int GRID_SIZE = 3;
-    private static int GRIDS_PER_PLAYER_WIDTH = 3;
-    private static int PLAYER_START_LENGTH = 27; 
+    private static int GRID_SIZE = 4;
+    private static int GRIDS_PER_PLAYER_WIDTH = 4;
+    private static double GRID_WIDTH = 200 * GRIDS_PER_PLAYER_WIDTH;
+    private static double GRID_HEIGTH = 160 * GRIDS_PER_PLAYER_WIDTH;
+    private static int PLAYER_START_LENGTH = 8 * GRIDS_PER_PLAYER_WIDTH; 
     private static int JUMPS_PER_HORIZONTAL_MOVE = 1000;
     private static long GAME_SPEED = 7;
     private HashMap<Integer, Rectangle> gridList = new HashMap<>();
@@ -100,7 +100,7 @@ public class MainBoard extends Application {
                 rectangle.setX(i);
                 rectangle.setY(j);
                 pane.getChildren().add(rectangle);
-                Integer a = (j + i * JUMPS_PER_HORIZONTAL_MOVE)/3;
+                Integer a = (j + i * JUMPS_PER_HORIZONTAL_MOVE)/GRID_SIZE;
                 gridList.put(a, rectangle);
             }
         }
