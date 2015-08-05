@@ -15,6 +15,7 @@ import javafx.scene.paint.Color;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.HashMap;
+import java.util.TreeMap;
 
 
 
@@ -25,23 +26,23 @@ import java.util.HashMap;
 public class MainBoard extends Application {
     
     private Pane pane = new Pane();
-    private static int GRID_SIZE = 4;
+    private static int BLOCK_SIZE = 4;
     private static int GRIDS_PER_PLAYER_WIDTH = 4;
-    private static double GRID_WIDTH = 200 * GRIDS_PER_PLAYER_WIDTH;
-    private static double GRID_HEIGTH = 160 * GRIDS_PER_PLAYER_WIDTH;
+    private static int GRID_WIDTH = 200 * GRIDS_PER_PLAYER_WIDTH;
+    private static int GRID_HEIGTH = 160 * GRIDS_PER_PLAYER_WIDTH;
     private static int PLAYER_START_LENGTH = 8 * GRIDS_PER_PLAYER_WIDTH; 
-    private static int JUMPS_PER_HORIZONTAL_MOVE = 1000;
+    private static int MULIPLIER_X = 1000;
     private static long GAME_SPEED = 7;
-    private HashMap<Integer, Rectangle> gridList = new HashMap<>();
-    private ArrayList<Rectangle> playerOne = new ArrayList<>();
     private boolean isAlive = true;
     private boolean isRunning = false;
-    //Current location is given by the upper right grid of the player
+    //Current location is given by the upper left buildingblock in the moving direction of the player
     private int currentLocation;
     private int playerLength;
     private String currentDirection = "Right";
     private String turnDirection = "Right";
     private boolean isHorizontal = true;
+    private GameGrid gameGrid;
+    private Player player;
     
     public MainBoard () {
         
@@ -50,25 +51,26 @@ public class MainBoard extends Application {
     @Override
     public void start(Stage BattleStage) throws InterruptedException {
         Scene mainScene = new Scene(pane, GRID_WIDTH, GRID_HEIGTH);
-        makeGrid();
-        makePlayer();
+        gameGrid = new GameGrid(GRID_HEIGTH, GRID_WIDTH, pane, MULIPLIER_X, Color.AQUA, BLOCK_SIZE);
+        player = new Player(1000, PLAYER_START_LENGTH, GRIDS_PER_PLAYER_WIDTH, MULIPLIER_X, Color.RED, gameGrid);
+        
+        currentLocation = player.getCurrentLocation();
         
         BattleStage.setScene(mainScene);
         BattleStage.show();
         
-        new Thread(new Runnable() {
-            public void run() {
-                try {
-                    while (isAlive) {
-                        if(currentDirection != null && isRunning) {
-                           movePlayer();
+        new Thread(() -> {
+            try {
+                while (isAlive) {
+                    if(currentDirection != null && isRunning) {
+                        movePlayer();
+                        System.out.println(player.getLength()*player.getWidth());
 
-                        }
-                        Thread.sleep(100/GAME_SPEED);
                     }
+                    Thread.sleep(100/GAME_SPEED);
                 }
-                catch (InterruptedException ex) {
             }
+            catch (InterruptedException ex) {
             }
         }).start();
         
@@ -82,49 +84,17 @@ public class MainBoard extends Application {
                 case UP: setTurnDirection("Up"); break;
                 case DOWN: setTurnDirection("Down"); break;
                 case ENTER: isRunning = true; break;
+                case L: player.setLength(player.getLength() + player.getWidth()); break;
+                case F: GAME_SPEED ++; break;
                 //default only for testing
                 default:movePlayer();
             }
         });
     }
-    //Set up the board and the player
-    
-    /**
-     * Creates the grid that the player is moving around on. The grid is not neceserilly 
-     * the samt size as the player, but should be a square root of the size of the player.
-     */
-    public void makeGrid() {
-        for(int i = 0; i < GRID_WIDTH; i += GRID_SIZE) {
-            for(int j = 0; j < GRID_HEIGTH; j += GRID_SIZE) {
-                Rectangle rectangle = new Rectangle(GRID_SIZE, GRID_SIZE, Color.RED);
-                rectangle.setX(i);
-                rectangle.setY(j);
-                pane.getChildren().add(rectangle);
-                Integer a = (j + i * JUMPS_PER_HORIZONTAL_MOVE)/GRID_SIZE;
-                gridList.put(a, rectangle);
-            }
-        }
-    }
-    /**
-     * Creates the player, or players if that feature is introduced. 
-     */
-    public void makePlayer() {
-        int startPoint = 0;
-        for(int j = startPoint; j < startPoint + JUMPS_PER_HORIZONTAL_MOVE*PLAYER_START_LENGTH; j += JUMPS_PER_HORIZONTAL_MOVE) {
-            for(int i = 0; i < GRIDS_PER_PLAYER_WIDTH ; i++) {
-                Rectangle startSnake = gridList.get(i + j);
-                startSnake.setFill(Color.BLUE);
-                playerOne.add(startSnake);
-                playerLength = PLAYER_START_LENGTH;
-                currentLocation = j;
-                System.out.println(j);
-            }
-        }
-    }
-    
     public void movePlayer() {
-        if ((currentDirection != turnDirection) && ((currentLocation + JUMPS_PER_HORIZONTAL_MOVE) % (GRIDS_PER_PLAYER_WIDTH*JUMPS_PER_HORIZONTAL_MOVE) < JUMPS_PER_HORIZONTAL_MOVE) && ((currentLocation + JUMPS_PER_HORIZONTAL_MOVE) % GRIDS_PER_PLAYER_WIDTH ==0)) {
+        if ((currentDirection != turnDirection) && ((currentLocation + MULIPLIER_X) % (GRIDS_PER_PLAYER_WIDTH*MULIPLIER_X) < MULIPLIER_X) && ((currentLocation + MULIPLIER_X) % GRIDS_PER_PLAYER_WIDTH ==0)) {
             currentDirection = turnDirection;
+            player.turnSwap(turnDirection);
         }
         if (currentDirection.equals("Right") || currentDirection.equals("Left")) {
             isHorizontal = true;
@@ -143,83 +113,29 @@ public class MainBoard extends Application {
     
     public void moveRight() {
         for(int i = 0 ; i < GRIDS_PER_PLAYER_WIDTH; i++) {
-            Rectangle toMove = gridList.get(currentLocation + JUMPS_PER_HORIZONTAL_MOVE + i);
-              toMove.setFill(Color.BLUE);
-              Rectangle toRemove = playerOne.get(i);
-              toRemove.setFill(Color.RED);
+            player.movePlayer(gameGrid.getBlock(currentLocation + MULIPLIER_X + i)); 
+            
         }
-        for(int i = 0 ; i < GRIDS_PER_PLAYER_WIDTH; i++) {
-            Rectangle toMove = gridList.get(currentLocation + JUMPS_PER_HORIZONTAL_MOVE + i);        
-            playerOne.add(toMove);
-        }
-        Iterator itr = playerOne.iterator();
-        while(itr.hasNext()) {
-            Object rec = itr.next();
-            if(playerOne.size() > playerLength*GRIDS_PER_PLAYER_WIDTH) {
-                    itr.remove();
-            }
-        }
-            currentLocation += JUMPS_PER_HORIZONTAL_MOVE;
+        currentLocation += MULIPLIER_X;
     }
+        
     public void moveLeft() {       
         for(int i = 0 ; i < GRIDS_PER_PLAYER_WIDTH; i++) {
-            Rectangle toMove = gridList.get(currentLocation -(GRIDS_PER_PLAYER_WIDTH * JUMPS_PER_HORIZONTAL_MOVE) + i);
-            toMove.setFill(Color.BLUE);
-            Rectangle toRemove = playerOne.get(i);
-            toRemove.setFill(Color.RED);
+            player.movePlayer(gameGrid.getBlock(currentLocation - (GRIDS_PER_PLAYER_WIDTH * MULIPLIER_X) + i));
         }
-        for(int i = 0 ; i < GRIDS_PER_PLAYER_WIDTH; i++) {
-            Rectangle toMove = gridList.get(currentLocation -(GRIDS_PER_PLAYER_WIDTH * JUMPS_PER_HORIZONTAL_MOVE) + i);        
-            playerOne.add(toMove);
-        }
-        Iterator itr = playerOne.iterator();
-        while(itr.hasNext()) {
-            Object rec = itr.next();
-            if(playerOne.size() > playerLength*GRIDS_PER_PLAYER_WIDTH) {
-                    itr.remove();
-            }
-        }
-            currentLocation -= JUMPS_PER_HORIZONTAL_MOVE;
+        currentLocation -= MULIPLIER_X;
     }
     public void moveUp() {       
         for(int i = GRIDS_PER_PLAYER_WIDTH - 1; i >= 0; i--) {
-            Rectangle toMove = gridList.get(currentLocation - 1 - (i * JUMPS_PER_HORIZONTAL_MOVE));
-            toMove.setFill(Color.BLUE);
-            Rectangle toRemove = playerOne.get(i);
-            toRemove.setFill(Color.RED);
+            player.movePlayer(gameGrid.getBlock(currentLocation - 1 - (i * MULIPLIER_X)));
         }
-        for(int i = GRIDS_PER_PLAYER_WIDTH - 1 ; i >= 0; i--) {
-            Rectangle toMove = gridList.get(currentLocation - 1 - (i * JUMPS_PER_HORIZONTAL_MOVE));        
-            playerOne.add(toMove);
-        }
-        Iterator itr = playerOne.iterator();
-        while(itr.hasNext()) {
-            Object rec = itr.next();
-            if(playerOne.size() > playerLength*GRIDS_PER_PLAYER_WIDTH) {
-                    itr.remove();
-            }
-        }
-            currentLocation --;
+        currentLocation --;
     }
     public void moveDown() {       
         for(int i = GRIDS_PER_PLAYER_WIDTH - 1; i >= 0; i--) {
-            Rectangle toMove = gridList.get(currentLocation + GRIDS_PER_PLAYER_WIDTH - (i * JUMPS_PER_HORIZONTAL_MOVE));
-            toMove.setFill(Color.BLUE);
-            Rectangle toRemove = playerOne.get(i);
-            toRemove.setFill(Color.RED);
+            player.movePlayer(gameGrid.getBlock(currentLocation + GRIDS_PER_PLAYER_WIDTH - (i * MULIPLIER_X)));
         }
-        for(int i = GRIDS_PER_PLAYER_WIDTH - 1 ; i >= 0; i--) {
-            Rectangle toMove = gridList.get(currentLocation + GRIDS_PER_PLAYER_WIDTH - (i * JUMPS_PER_HORIZONTAL_MOVE));        
-            playerOne.add(toMove);
-        }
-        Iterator itr = playerOne.iterator();
-        while(itr.hasNext()) {
-            Object rec = itr.next();
-            if(playerOne.size() > playerLength*GRIDS_PER_PLAYER_WIDTH) {
-                    itr.remove();
-            }
-        }
-            currentLocation ++;
+        currentLocation ++;
     }
     //Set methods
     public void setTurnDirection(String direction) {
